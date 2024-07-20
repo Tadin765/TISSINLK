@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>جمعية أمل تسناس للتنمية و الخدمات الاجتماعية والماء الصالح للشرب</title>
+   <style>
+       body {
+           font-family: Arial, sans-serif;
+           margin: 0;
+           padding: 20px;
+           background-color: #f0f0f0;
+       }
+       .container {
+           max-width: 600px;
+           margin: 0 auto;
+           background-color: white;
+           padding: 20px;
+           border: 2px solid #000;
+       }
+       h1 {
+           text-align: center;
+           font-size: 18px;
+           margin-bottom: 20px;
+       }
+       .form-group {
+           margin-bottom: 10px;
+       }
+       label {
+           display: inline-block;
+           width: 150px;
+       }
+       input {
+           width: 200px;
+           padding: 5px;
+           text-align: center;
+       }
+       table {
+           width: 100%;
+           border-collapse: collapse;
+           margin-top: 20px;
+       }
+       th, td {
+           border: 1px solid #000;
+           padding: 8px;
+           text-align: right;
+       }
+       #previousInfo {
+           margin-top: 10px;
+           padding: 10px;
+           background-color: #e7f3fe;
+           border: 1px solid #3498db;
+           border-radius: 4px;
+       }
+       button {
+           display: block;
+           width: 100%;
+           padding: 10px;
+           background-color: #4CAF50;
+           color: white;
+           border: none;
+           cursor: pointer;
+           margin-top: 20px;
+       }
+       button:hover {
+           background-color: #45a049;
+       }
+   </style>
+</head>
+<body>
+<div id="content" style="display: none;">
+   <div class="container">
+
+       <div style="text-align: center;" id="meterInput">
+           <div class="form-group">
+               <label for="meterNumber">رقم العداد:</label>
+               <input type="text" id="meterNumber" required>
+           </div>
+           <button onclick="checkMeter()">متابعة</button>
+       </div>
+
+       <div id="previousInfo" style="display:none; text-align: center;"></div>
+       <div id="consumptionInput" style="display:none; text-align: center;">
+           <div class="form-group">
+               <label for="customerName">اسم المستهلك:</label>
+               <input type="text" id="customerName" required>
+           </div>
+           <div class="form-group">
+               <label for="currentReading">الاستهلاك الحالي على العداد:</label>
+               <input type="number" id="currentReading" required>
+           </div>
+           <button onclick="addEntry()">إضافة</button>
+       </div></div>
+        
+       <br>
+       <br>
+      <div id="dataTable" style="border: 2px solid black; padding: 4px; display:none;">   
+      <div id="ddataTable" style="border: 2px solid black; padding: 8px;">   
+       <table>
+       <div>
+       <h1 style=" width: 96%; margin-right: 1%;">جمعية أمل تسناس للتنمية و الخدمات الاجتماعية والماء الصالح للشرب</h1>
+       <hr>
+<div id="consumptionInput" style="display:;">
+   <div class="form-group">
+
+       <label for="noCompte">رقم العداد:</label>
+       <span id="displayMeterNumber"></span> <br>
+       <label for="customerName">اسم المستهلك:</label>
+       <span id="displayCustomerName"></span><br>
+       <label for="Total">مجموع الاستهلاك:</label>
+       <span id="Total"></span><br>
+       <label for="currentReading">استهلاك الشهر الحالي:</label>
+       <span id="displayCurrentReading"></span>
+   </div>
+</div>
+         </div>  
+
+<tr>
+   <td> المساهمة</td>
+   <td> الاستهلاك</td>
+   <td> الغرامة</td>
+   <td> المجموع</td>
+</tr>
+
+           <tbody id="tableBody"></tbody>
+       </table>
+<table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
+       <tr>
+           <th style="width: 70%; padding: 15px; text-align: right; border: 1px solid #ddd;">
+               <h4 style="margin: 0;">توقيع الزبون: </h4>
+           </th>
+           <th style="width: 30%; padding: 15px; text-align: left; border: 1px solid #ddd;">
+               <h3 id="currentDate" style="margin: 0;"></h3>
+           </th>
+       </tr>
+   </table>
+</div></div>
+<div>
+<div id="doublePrintArea" style="display:none;">
+   <div id="dataTable1"></div>
+   <div style="page-break-before: always;"></div>
+   <div id="dataTable2"></div>
+</div>
+
+   </div>
+       <button onclick="downloadImage()" id="downloadButton" style="display:;">طباعة الفاتورة الحالية</button>
+       <button onclick="downloadPDF()" id="downloadButton" style="display:block;">طباعة جميع الفواتير</button>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</div>
+
+  <div id="expiredMessage" style="display: none; color: red; font-size: 18px; text-align: center; margin-top: 20px;">
+  <p>لقد انتهت صلاحية هذا الملف.</p>
+  </div>
+   <script>
+   // الثوابت
+   const pricePerTon = 100; // سعر الطن بالدرهم
+   const contributionFee = 200; // مبلغ المساهمة الثابت
+
+   // تحديد تاريخ انتهاء الصلاحية (مثال: 31 ديسمبر 2024)
+   const expirationDate = new Date('2024-12-31');
+
+   // دالة فحص العداد
+   function checkMeter() {
+       const meterNumber = document.getElementById('meterNumber').value;
+       if (meterNumber) {
+           const previousData = JSON.parse(localStorage.getItem(meterNumber)) || {};
+           if (previousData.lastReading) {
+               document.getElementById('previousInfo').innerHTML = `
+                   القراءة السابقة: ${previousData.lastReading} طن<br>
+                   الاستهلاك السابق: ${previousData.lastConsumption || 0} طن<br>
+                   المبلغ السابق: ${previousData.lastAmount || 0} ريال
+               `;
+               document.getElementById('previousInfo').style.display = 'block';
+           } else {
+               document.getElementById('previousInfo').innerHTML = 'لا توجد بيانات سابقة لهذا العداد.';
+               document.getElementById('previousInfo').style.display = 'block';
+           }
+           document.getElementById('meterInput').style.display = 'none';
+           document.getElementById('consumptionInput').style.display = 'block';
+           if (previousData.customerName) {
+               document.getElementById('customerName').value = previousData.customerName;
+           }
+       } else {
+           alert('الرجاء إدخال رقم العداد');
+       }
+   }
+
+   // دالة فحص انتهاء الصلاحية
+   function checkExpiration() {
+       const now = new Date();
+       if (now > expirationDate) {
+           document.getElementById('expiredMessage').style.display = 'block';
+           document.getElementById('content').style.display = 'none';
+       } else {
+           document.getElementById('expiredMessage').style.display = 'none';
+           document.getElementById('content').style.display = 'block';
+           updateDate();
+       }
+   }
+
+   // دالة تحديث التاريخ
+   function updateDate() {
+       const now = new Date();
+       const month = String(now.getMonth() + 1).padStart(2, '0');
+       const year = now.getFullYear();
+       document.getElementById('currentDate').textContent = `${month}/${year}`;
+   }
+
+   // دالة إضافة إدخال جديد
+   function addEntry() {
+       const meterNumber = document.getElementById('meterNumber').value;
+       const customerName = document.getElementById('customerName').value;
+       const currentReading = parseFloat(document.getElementById('currentReading').value);
+
+       if (!meterNumber || !customerName || isNaN(currentReading)) {
+           alert('الرجاء إدخال جميع البيانات المطلوبة بشكل صحيح');
+           return;
+       }
+
+       const previousData = JSON.parse(localStorage.getItem(meterNumber)) || {};
+       const previousReading = previousData.lastReading || 0;
+       const consumption = currentReading - previousReading;
+       const consumptionCost = consumption * pricePerTon;
+       const totalAmount = consumptionCost + contributionFee;
+
+       const newData = {
+           customerName: customerName,
+           lastReading: currentReading,
+           lastConsumption: consumption,
+           lastAmount: totalAmount,
+           totalConsumption: currentReading // إضافة مجموع الاستهلاك
+       };
+
+       localStorage.setItem(meterNumber, JSON.stringify(newData));
+       document.getElementById('displayMeterNumber').textContent = meterNumber;
+       document.getElementById('displayCustomerName').textContent = customerName;
+       document.getElementById('displayCurrentReading').textContent = consumption + ' طن';
+       document.getElementById('Total').textContent = currentReading + ' طن';
+       updateTable(consumptionCost, totalAmount);
+       clearInputs();
+       showTable();
+   }
+
+   // دالة تحديث الجدول
+   function updateTable(consumptionCost, totalAmount) {
+       const tableBody = document.getElementById('tableBody');
+       const row = tableBody.insertRow();
+       row.insertCell(0).textContent = contributionFee.toFixed(0) + ' ريال  ';
+       row.insertCell(1).textContent = consumptionCost.toFixed(0) + ' ريال  ';
+       row.insertCell(2).textContent = '0';
+       row.insertCell(3).textContent = totalAmount.toFixed(0) + ' ريال';
+   }
+
+   // دالة مسح المدخلات
+   function clearInputs() {
+       document.getElementById('meterNumber').value = '';
+       document.getElementById('customerName').value = '';
+       document.getElementById('currentReading').value = '';
+       document.getElementById('previousInfo').style.display = 'none';
+       document.getElementById('meterInput').style.display = 'block';
+       document.getElementById('consumptionInput').style.display = 'none';
+   }
+
+   // دالة إظهار الجدول
+   function showTable() {
+       document.getElementById('dataTable').style.display = 'table';
+       document.getElementById('downloadButton').style.display = 'block';
+   }
+   
+   // دالة الحصول على بيانات جميع العملاء مع الترتيب
+   function getAllCustomerData() {
+       let customers = [];
+       for (let i = 0; i < localStorage.length; i++) {
+           const key = localStorage.key(i);
+           const data = JSON.parse(localStorage.getItem(key));
+           customers.push({ meterNumber: key, ...data });
+       }
+       
+       // فرز العملاء بناءً على رقم العداد
+       customers.sort((a, b) => {
+           return parseInt(a.meterNumber) - parseInt(b.meterNumber);
+       });
+       
+       return customers;
+   }
+
+   // دالة إنشاء HTML للفاتورة
+   function createInvoiceHTML(customer) {
+       return `
+       <div class="invoice" style="border: 2px solid black; padding: 8px; margin: 10px; ">
+           <h1 style="width: 96%; margin-right: 1%;">جمعية أمل تسناس للتنمية و الخدمات الاجتماعية والماء الصالح للشرب</h1>
+           <hr>
+           <div>
+               <label>رقم العداد:</label>
+               <span>${customer.meterNumber}</span><br>
+               <label>اسم المستهلك:</label>
+               <span>${customer.customerName}</span><br>
+               <label>مجموع الاستهلاك:</label>
+               <span>${customer.totalConsumption} طن</span><br>
+               <label>استهلاك الشهر الحالي:</label>
+               <span>${customer.lastConsumption} طن</span>
+           </div>
+           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+               <tr>
+                   <td>المساهمة</td>
+                   <td>الاستهلاك</td>
+                   <td>الغرامة</td>
+                   <td>المجموع</td>
+               </tr>
+               <tr>
+                   <td>${contributionFee.toFixed(0)} ريال</td>
+                   <td>${(customer.lastAmount - contributionFee).toFixed(0)} ريال</td>
+                   <td>0</td>
+                   <td>${customer.lastAmount.toFixed(0)} ريال</td>
+                   </tr>
+                   </table>
+                   <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; margin-top: 10px;">
+                   <tr>
+                   <th style="width: 70%; padding: 15px; text-align: right; border: 1px solid #ddd;">
+                   <h4 style="margin: 0;">توقيع الزبون: </h4>
+                   </th>
+                   <th style="width: 30%; padding: 15px; text-align: left; border: 1px solid #ddd;">
+                   <h3 id="currentDate" style="margin: 0;">${getCurrentDate()}</h3>
+                   </th>
+                   </tr>
+                   </table>
+                   </div>
+                   `;
+                   }
+                   
+                   // دالة للحصول على التاريخ الحالي بتنسيق شهر/سنة
+                   function getCurrentDate() {
+                   const now = new Date();
+                   const month = String(now.getMonth() + 1).padStart(2, '0');
+                   const year = now.getFullYear();
+                   return `${month}/${year}`;
+                   }
+                   
+                   // دالة تنزيل PDF
+                   function downloadPDF() {
+                   window.dataTable.style.display = 'block';
+                   const { jsPDF } = window.jspdf;
+                   const doc = new jsPDF('p', 'mm', 'a4'); // اتجاه عمودي
+                   
+                   const customers = getAllCustomerData(); // الآن هذه البيانات مرتبة
+                   let allInvoicesHTML = '';
+                   
+                   for (let i = 0; i < customers.length; i += 2) {
+                   allInvoicesHTML += `
+                   <div class="invoice-page" style="page-break-after: always; width: 210mm; height: 260mm; padding: 5mm;">
+                   <div class="customer-row" style="height: 48%; margin-bottom: -4%; display: flex;">
+                   <div class="invoice" style="width: 48%; margin-right: 2%;">
+                   ${createInvoiceHTML(customers[i])}
+                   </div>
+                   <div class="invoice" style="width: 48%;">
+                   ${createInvoiceHTML(customers[i])}
+                   </div>
+                   </div>
+                   ${customers[i+1] ? `
+                   <div class="customer-row" style="height: 48%; display: flex;">
+                   <div class="invoice" style="width: 48%; margin-right: 2%;">
+                   ${createInvoiceHTML(customers[i+1])}
+                   </div>
+                   <div class="invoice" style="width: 48%;">
+                   ${createInvoiceHTML(customers[i+1])}
+                   </div>
+                   </div>
+                   ` : ''}
+                   </div>
+                   `;
+                   }
+                   
+                   const tempDiv = document.createElement('div');
+                   tempDiv.innerHTML = allInvoicesHTML;
+                   document.body.appendChild(tempDiv);
+                   
+                   const pages = tempDiv.querySelectorAll('.invoice-page');
+                   
+                   const addPage = (page) => {
+                   return new Promise((resolve) => {
+                   html2canvas(page, {
+                   scale: 2,
+                   useCORS: true,
+                   logging: true
+                   }).then(canvas => {
+                   const imgData = canvas.toDataURL('image/png');
+                   const imgWidth = 210; // عرض A4 بالملم
+                   const imgHeight = 297; // ارتفاع A4 بالملم
+                   
+                   doc.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                   
+                   if (page !== pages[pages.length - 1]) {
+                   doc.addPage();
+                   }
+                   
+                   resolve();
+                   });
+                   });
+                   };
+                   
+                   const generatePDF = async () => {
+                   for (let page of pages) {
+                   await addPage(page);
+                   }
+                   
+                   // استخدام واجهة برمجة التطبيقات الخاصة بـ Android
+                   if (typeof Android !== 'undefined' && Android.savePDF) {
+                   const pdfData = doc.output('datauristring');
+                   Android.savePDF(pdfData, 'all_water_management_reports.pdf');
+                   } else {
+                   // Fallback for web browsers
+                   doc.save('all_water_management_reports.pdf');
+                   }
+                   
+                   document.body.removeChild(tempDiv);
+                   };
+                   
+                   generatePDF();
+                   }
+                   
+                   // دالة تنزيل الصورة
+                   function downloadImage() {
+                   const customerName = document.getElementById('displayCustomerName').textContent;
+                   const originalTable = document.querySelector("#dataTable");
+                   
+                   // نسخ الجدول الأصلي إلى القسمين الجديدين
+                   document.getElementById('dataTable1').innerHTML = originalTable.outerHTML;
+                   document.getElementById('dataTable2').innerHTML = originalTable.outerHTML;
+                   
+                   // إظهار قسم الطباعة المزدوجة
+                   document.getElementById('doublePrintArea').style.display = 'block';
+                   
+                   html2canvas(document.querySelector("#doublePrintArea")).then(canvas => {
+                   const image = canvas.toDataURL("image/png");
+                   
+                   // استخدام واجهة برمجة التطبيقات الخاصة بـ Android
+                   if (typeof Android !== 'undefined' && Android.saveImage) {
+                   Android.saveImage(image, `${customerName}.png`);
+                   } else {
+                   // Fallback for web browsers
+                   const link = document.createElement('a');
+                   link.download = `${customerName}.png`;
+                   link.href = image;
+                   link.click();
+                   }
+                   
+                   // إخفاء قسم الطباعة المزدوجة بعد التنزيل
+                   document.getElementById('doublePrintArea').style.display = 'none';
+                   });
+                   }
+                   
+                   // تنفيذ فحص انتهاء الصلاحية عند تحميل الصفحة
+                   checkExpiration();
+                   </script>
+                   </body>
+                   </html>
+      
